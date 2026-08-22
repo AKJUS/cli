@@ -80,6 +80,7 @@ func runDownload(cfg config.Config, flags *pflag.FlagSet, args []string) error {
 		return err
 	}
 
+	var successes int
 	for _, sf := range download.payload.files() {
 		url, err := sf.url()
 		if err != nil {
@@ -98,8 +99,10 @@ func runDownload(cfg config.Config, flags *pflag.FlagSet, args []string) error {
 		defer res.Body.Close()
 
 		if res.StatusCode != http.StatusOK {
-			// TODO: deal with it
-			continue
+			if successes > 0 {
+				fmt.Fprintf(Err, "Downloaded %d/%d files\n", successes, len(download.payload.files()))
+			}
+			return fmt.Errorf("received HTTP/%d when fetching %#v", res.StatusCode, url)
 		}
 
 		path := sf.relativePath()
@@ -117,6 +120,7 @@ func runDownload(cfg config.Config, flags *pflag.FlagSet, args []string) error {
 		if err != nil {
 			return err
 		}
+		successes++
 	}
 	fmt.Fprintf(Err, "\nDownloaded to\n")
 	fmt.Fprintf(Out, "%s\n", metadata.Dir)
